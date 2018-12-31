@@ -15,7 +15,7 @@ namespace ParkingSystemAPI.Controllers
     public class ParkingController : ApiController
     {
         System.Data.SqlClient.SqlConnection tmpCon = new System.Data.SqlClient.SqlConnection();
-        String saconstring = @"Data Source=.\TRING;Initial Catalog=TES675496797;Persist Security Info=True;User ID=sa; Password=zdxfks83?";
+        String saconstring = "";
         double price = 1;
         double priceMoreThanFour = 1.5;
 

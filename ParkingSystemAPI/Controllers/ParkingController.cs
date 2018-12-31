@@ -149,7 +149,7 @@ namespace ParkingSystemAPI.Controllers
         [Route("api/ParkingController/TopCustomer")]
         [System.Web.Http.AcceptVerbs("GET", "POST")]
         [System.Web.Http.HttpGet]
-        public string TopCustomer()  // POST
+        public string TopCustomer()  
         {
             tmpCon = new System.Data.SqlClient.SqlConnection(saconstring);
 

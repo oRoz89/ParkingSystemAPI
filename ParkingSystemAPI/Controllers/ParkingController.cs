@@ -15,7 +15,7 @@ namespace ParkingSystemAPI.Controllers
     public class ParkingController : ApiController
     {
         System.Data.SqlClient.SqlConnection tmpCon = new System.Data.SqlClient.SqlConnection();
-        String saconstring = "";
+        String saconstring = @" ";
         double price = 1;
         double priceMoreThanFour = 1.5;
 
@@ -25,8 +25,9 @@ namespace ParkingSystemAPI.Controllers
         public string PostParking(String customer, String operater)  // POST
         {
             tmpCon = new System.Data.SqlClient.SqlConnection(saconstring);
-            customer = CreateSlug(customer);
-            String query = "INSERT INTO dbo.PARKINGS (CustomerSlug, Operater, EnterTime) VALUES ('[CustomerSlug]', [Operater], '[EnterTime]'; )";
+            customer = SlugGenerator.SlugGenerator.GenerateSlug(customer, "_"); 
+            
+            String query = "INSERT INTO dbo.PARKINGS (CustomerSlug, Operater, EnterTime) VALUES ('[CustomerSlug]', [Operater], '[EnterTime]')";
             query = query.Replace("[CustomerSlug]", customer);
             query = query.Replace("[Operater]", operater);
             query = query.Replace("[EnterTime]", DateTime.Now.ToString("yyyyMMdd HH:mm:ss"));
@@ -48,12 +49,20 @@ namespace ParkingSystemAPI.Controllers
         public string GetOpenedParkings(String customer)  // POST
         {
             tmpCon = new System.Data.SqlClient.SqlConnection(saconstring);
-            customer = CreateSlug(customer);
+            customer = SlugGenerator.SlugGenerator.GenerateSlug(customer, "_");
             DataTable tblOpenedParkigns = GetTable(tmpCon, "SELECT * FROM dbo.PARKINGS WHERE CustomerSlug = '" + customer + "' AND ExitTime IS NULL");
+
+            foreach (DataRow row in tblOpenedParkigns.Rows)
+            {
+                DateTime dtEnterTime = DateTime.Parse( row["EnterTime"].ToString());
+                 row["Price"]  = CalculateStays(dtEnterTime);
+            }
 
             if (tblOpenedParkigns.Rows.Count > 0)
             {
-                return JsonConvert.SerializeObject(tblOpenedParkigns);
+                String resp = JsonConvert.SerializeObject(tblOpenedParkigns);
+                resp.Replace("\"", "");
+                return resp;
             }
             else
             {
@@ -69,10 +78,11 @@ namespace ParkingSystemAPI.Controllers
         {
             CultureInfo MyCultureInfo = new CultureInfo("de-DE");
             tmpCon = new System.Data.SqlClient.SqlConnection(saconstring);
-            String dtNow = DateTime.Now.ToString("yyyyMMdd HH:mm:ss");
+            String dtNow = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
 
             object EnterTime = GetScalar(tmpCon, "SELECT EnterTime FROM dbo.PARKINGS WHERE ID = " + ID);
-            DateTime dtEnterTime = DateTime.Parse(Convert.ToString(EnterTime), MyCultureInfo);
+            String strDatetime = Convert.ToString(EnterTime);
+            DateTime dtEnterTime = DateTime.ParseExact(strDatetime, "dd.MM.yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
             String prc = CalculateStays(dtEnterTime);
 
             object res = GetNonQuery(tmpCon, "UPDATE dbo.PARKINGS SET Price = " + prc.Replace(",",".") + ", ExitTime = '" + dtNow + "' WHERE ID = " + ID);
@@ -138,7 +148,9 @@ namespace ParkingSystemAPI.Controllers
                
             if (tblTopOperater.Rows.Count > 0)
             {
-                return JsonConvert.SerializeObject(tblTopOperater);
+                String resp = JsonConvert.SerializeObject(tblTopOperater);
+                resp.Replace("\"", "");
+                return resp;
             }
             else
             {
@@ -157,7 +169,9 @@ namespace ParkingSystemAPI.Controllers
 
             if (tblTopCustomer.Rows.Count > 0)
             {
-                return JsonConvert.SerializeObject(tblTopCustomer);
+                String resp = JsonConvert.SerializeObject(tblTopCustomer);
+                resp.Replace("\"", "");
+                return resp;
             }
             else
             {
@@ -166,32 +180,7 @@ namespace ParkingSystemAPI.Controllers
         }
 
 
-        public string CreateSlug(string Title)
-        {
-            string Slug = Title.ToLower();
-            // Replace characters specific fo croatian language
-            // You don't need this part for english language
-            // Also, you can replace other characters specific for other languages
-            // e.g. é to e for French language etc.
-            Slug = Slug.Replace("č", "c");
-            Slug = Slug.Replace("ć", "c");
-            Slug = Slug.Replace("š", "s");
-            Slug = Slug.Replace("ž", "z");
-            Slug = Slug.Replace("đ", "dj");
-
-            // Replace - with empty space
-            Slug = Slug.Replace("-", " ");
-
-            // Replace unwanted characters with space
-            Slug = Regex.Replace(Slug, @"[^a-z0-9\s-]", " ");
-            // Replace multple white spaces with single space
-            Slug = Regex.Replace(Slug, @"\s+", " ").Trim();
-            // Replace white space with -
-            Slug = Slug.Replace(" ", "-");
-
-            return Slug;
-        }
-
+         
         public static DataTable GetTable(SqlConnection Connection, string SQL, bool ShowError = false)
         {
             ConnectionState ps = Connection.State;
